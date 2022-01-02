@@ -1,15 +1,16 @@
 package com.agelmahdi.trackingapp.UI.Fragments
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.fragment.findNavController
-import com.agelmahdi.trackingapp.R
+import com.agelmahdi.trackingapp.Others.Constants
+import com.agelmahdi.trackingapp.Others.Constants.ACTION_START_OR_RESUME_SERVICE
+import com.agelmahdi.trackingapp.Sevices.TrackingService
 import com.agelmahdi.trackingapp.UI.MainViewModel
-import com.agelmahdi.trackingapp.databinding.FragmentSetupBinding
 import com.agelmahdi.trackingapp.databinding.FragmentTrackingBinding
 import com.google.android.gms.maps.GoogleMap
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,13 +35,25 @@ class TrackingFragment: Fragment() {
     ): View {
         _binding = FragmentTrackingBinding.inflate(inflater, container, false)
         val view = binding.root
+
         binding.mapView.onCreate(savedInstanceState)
+
         binding.mapView.getMapAsync {
             map = it
         }
-
+        
+        binding.btnToggleRun.setOnClickListener{
+            sendCommandToService(ACTION_START_OR_RESUME_SERVICE)
+        }
 
         return view
+    }
+
+    private fun sendCommandToService(action: String){
+        Intent(requireContext(),TrackingService::class.java).also {
+            it.action = action
+            requireContext().startService(it)
+        }
     }
 
     override fun onResume() {

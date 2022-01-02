@@ -100,7 +100,7 @@ dependencies {
 
     // life cycle for our service
 
-    def lifecycle_version = "2.1.0"
-    api "androidx.lifecycle:lifecycle-common-java8:$lifecycle_version"
+    implementation 'androidx.lifecycle:lifecycle-service:2.4.0'
+
 
 }
