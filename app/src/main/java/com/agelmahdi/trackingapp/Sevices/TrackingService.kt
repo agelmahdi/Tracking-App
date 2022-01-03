@@ -10,7 +10,6 @@ import android.content.Intent
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import androidx.lifecycle.LifecycleService
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_PAUSE_SERVICE
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_SHOW_TRACKING_FRAGMENT
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_START_OR_RESUME_SERVICE
@@ -22,7 +21,8 @@ import com.agelmahdi.trackingapp.R
 import com.agelmahdi.trackingapp.UI.MainActivity
 import timber.log.Timber
 
-class TrackingService : LifecycleService() {
+
+class TrackingService(): BackgroundLocationService() {
 
     var isServiceStarted = true
 
@@ -50,6 +50,11 @@ class TrackingService : LifecycleService() {
     }
 
     private fun startForegroundService() {
+
+        addEmptyPolyline()
+
+        isTracking.postValue(true)
+
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE)
                 as NotificationManager
 
@@ -87,4 +92,6 @@ class TrackingService : LifecycleService() {
         )
         notificationManager.createNotificationChannel(channel)
     }
+
+
 }
