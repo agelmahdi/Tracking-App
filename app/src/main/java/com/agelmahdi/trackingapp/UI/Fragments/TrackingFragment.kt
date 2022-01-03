@@ -7,16 +7,25 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Observer
 import com.agelmahdi.trackingapp.Others.Constants
+import com.agelmahdi.trackingapp.Others.Constants.ACTION_PAUSE_SERVICE
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_START_OR_RESUME_SERVICE
+import com.agelmahdi.trackingapp.Others.Constants.CAMERA_ZOOM
+import com.agelmahdi.trackingapp.Others.Constants.POLYLINE_COLOR
+import com.agelmahdi.trackingapp.Others.Constants.POLYLINE_WITH
+import com.agelmahdi.trackingapp.Sevices.BackgroundLocationService
+import com.agelmahdi.trackingapp.Sevices.Polyline
 import com.agelmahdi.trackingapp.Sevices.TrackingService
 import com.agelmahdi.trackingapp.UI.MainViewModel
 import com.agelmahdi.trackingapp.databinding.FragmentTrackingBinding
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.model.PolylineOptions
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class TrackingFragment: Fragment() {
+class TrackingFragment : Fragment() {
 
     private val viewModel: MainViewModel by viewModels()
 
@@ -26,7 +35,10 @@ class TrackingFragment: Fragment() {
     // onDestroyView.
     private val binding get() = _binding!!
 
-    private var map: GoogleMap? =null
+    private var map: GoogleMap? = null
+
+    private var isTracking = false
+    private var pathPoint = mutableListOf<Polyline>()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -40,17 +52,88 @@ class TrackingFragment: Fragment() {
 
         binding.mapView.getMapAsync {
             map = it
-        }
-        
-        binding.btnToggleRun.setOnClickListener{
-            sendCommandToService(ACTION_START_OR_RESUME_SERVICE)
+            addAllPolylines()
         }
 
+        binding.btnToggleRun.setOnClickListener {
+            toggleRun()
+        }
+        subscribeToObservers()
         return view
     }
 
-    private fun sendCommandToService(action: String){
-        Intent(requireContext(),TrackingService::class.java).also {
+    private fun toggleRun() {
+
+        if (isTracking) {
+            sendCommandToService(ACTION_PAUSE_SERVICE)
+        } else {
+            sendCommandToService(ACTION_START_OR_RESUME_SERVICE)
+
+        }
+    }
+
+    private fun subscribeToObservers() {
+        BackgroundLocationService.isTracking.observe(viewLifecycleOwner, Observer {
+            updateTracking(it)
+        })
+
+        BackgroundLocationService.pathPoints.observe(viewLifecycleOwner, Observer {
+            pathPoint = it
+            addLatestPolyline()
+            moveCameraToUser()
+        })
+    }
+
+    private fun updateTracking(isTracking: Boolean) {
+        this.isTracking = isTracking
+        if (!isTracking) {
+            binding.btnToggleRun.text = "Start"
+            binding.btnFinishRun.visibility = View.VISIBLE
+        } else {
+            binding.btnToggleRun.text = "Stop"
+            binding.btnFinishRun.visibility = View.GONE
+
+        }
+    }
+
+    private fun moveCameraToUser() {
+        if (pathPoint.isNotEmpty() && pathPoint.last().isNotEmpty()) {
+            map?.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(
+                    pathPoint.last().last(),
+                    CAMERA_ZOOM
+                )
+            )
+        }
+    }
+
+    private fun addAllPolylines() {
+        for (polyline in pathPoint) {
+            val polylineOptions = PolylineOptions()
+                .color(POLYLINE_COLOR)
+                .width(POLYLINE_WITH)
+                .addAll(polyline)
+
+            map?.addPolyline(polylineOptions)
+        }
+    }
+
+    private fun addLatestPolyline() {
+        if (pathPoint.isNotEmpty() && pathPoint.last().size > 1) {
+            val preLastLatlng = pathPoint.last()[pathPoint.last().size - 2]
+            val lastLatlng = pathPoint.last().last()
+            val polylineOptions = PolylineOptions()
+                .color(POLYLINE_COLOR)
+                .width(POLYLINE_WITH)
+                .add(preLastLatlng)
+                .add(lastLatlng)
+
+            map?.addPolyline(polylineOptions)
+        }
+    }
+
+    private fun sendCommandToService(action: String) {
+        Intent(requireContext(), TrackingService::class.java).also {
             it.action = action
             requireContext().startService(it)
         }
@@ -86,8 +169,10 @@ class TrackingFragment: Fragment() {
         super.onSaveInstanceState(outState)
         binding.mapView.onSaveInstanceState(outState)
     }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
+
 }

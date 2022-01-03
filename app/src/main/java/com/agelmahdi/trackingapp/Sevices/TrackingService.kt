@@ -39,7 +39,7 @@ class TrackingService(): BackgroundLocationService() {
                     }
                 }
                 ACTION_PAUSE_SERVICE -> {
-                    Timber.d(ACTION_PAUSE_SERVICE)
+                    pauseService()
                 }
                 ACTION_STOP_SERVICE -> {
                     Timber.d(ACTION_START_OR_RESUME_SERVICE)
@@ -49,6 +49,9 @@ class TrackingService(): BackgroundLocationService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
+    private fun pauseService(){
+        isTracking.postValue(false)
+    }
     private fun startForegroundService() {
 
         addEmptyPolyline()

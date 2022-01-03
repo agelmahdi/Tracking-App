@@ -1,7 +1,6 @@
 package com.agelmahdi.trackingapp.UI.Fragments
 
 import android.Manifest
-import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -103,4 +102,5 @@ class RunFragment : Fragment(), EasyPermissions.PermissionCallbacks {
 
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
+
 }
