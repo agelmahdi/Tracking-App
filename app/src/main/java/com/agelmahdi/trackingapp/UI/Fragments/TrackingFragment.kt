@@ -14,6 +14,7 @@ import com.agelmahdi.trackingapp.Others.Constants.ACTION_START_OR_RESUME_SERVICE
 import com.agelmahdi.trackingapp.Others.Constants.CAMERA_ZOOM
 import com.agelmahdi.trackingapp.Others.Constants.POLYLINE_COLOR
 import com.agelmahdi.trackingapp.Others.Constants.POLYLINE_WITH
+import com.agelmahdi.trackingapp.Others.TrackingUtil
 import com.agelmahdi.trackingapp.Sevices.BackgroundLocationService
 import com.agelmahdi.trackingapp.Sevices.Polyline
 import com.agelmahdi.trackingapp.Sevices.TrackingService
@@ -39,6 +40,8 @@ class TrackingFragment : Fragment() {
 
     private var isTracking = false
     private var pathPoint = mutableListOf<Polyline>()
+
+    private var currentTimeInMillis = 0L
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -82,6 +85,13 @@ class TrackingFragment : Fragment() {
             addLatestPolyline()
             moveCameraToUser()
         })
+
+        BackgroundLocationService.timeRunInMillis.observe(viewLifecycleOwner, Observer {
+            currentTimeInMillis = it
+            val formatTime = TrackingUtil.formattedStopWatch(currentTimeInMillis,true)
+            binding.tvTimer.text = formatTime
+        })
+
     }
 
     private fun updateTracking(isTracking: Boolean) {

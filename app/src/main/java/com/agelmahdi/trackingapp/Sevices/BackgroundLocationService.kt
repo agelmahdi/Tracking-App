@@ -25,8 +25,10 @@ open class BackgroundLocationService : LifecycleService() {
     lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
     companion object {
+        val timeRunInMillis = MutableLiveData<Long>()
         val isTracking = MutableLiveData<Boolean>()
         val pathPoints = MutableLiveData<Polylines>()
+        val timeRunInSec = MutableLiveData<Long>()
     }
 
     override fun onCreate() {
@@ -41,6 +43,8 @@ open class BackgroundLocationService : LifecycleService() {
     private fun postInitValues() {
         isTracking.postValue(false)
         pathPoints.postValue(mutableListOf())
+        timeRunInMillis.postValue(0L)
+        timeRunInSec.postValue(0L)
     }
 
 
