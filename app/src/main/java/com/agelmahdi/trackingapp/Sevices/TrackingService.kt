@@ -11,6 +11,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_PAUSE_SERVICE
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_SHOW_TRACKING_FRAGMENT
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_START_OR_RESUME_SERVICE
@@ -19,15 +20,18 @@ import com.agelmahdi.trackingapp.Others.Constants.NOTIFICATION_CHANNEL_ID
 import com.agelmahdi.trackingapp.Others.Constants.NOTIFICATION_CHANNEL_NAME
 import com.agelmahdi.trackingapp.Others.Constants.NOTIFICATION_ID
 import com.agelmahdi.trackingapp.Others.Constants.TIMER_UPDATE_INTERVAL
+import com.agelmahdi.trackingapp.Others.TrackingUtil
 import com.agelmahdi.trackingapp.R
 import com.agelmahdi.trackingapp.UI.MainActivity
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import javax.inject.Inject
 
-
+@AndroidEntryPoint
 class TrackingService() : BackgroundLocationService() {
 
     var isServiceStarted = true
@@ -39,6 +43,21 @@ class TrackingService() : BackgroundLocationService() {
     private var timeRun = 0L
     private var timeStarted = 0L
     private var lastSecTimestamp = 0L
+
+    @Inject
+    lateinit var baseNotificationBuilder: NotificationCompat.Builder
+
+    lateinit var curNotificationBuilder: NotificationCompat.Builder
+
+    override fun onCreate() {
+        super.onCreate()
+        curNotificationBuilder = baseNotificationBuilder
+
+        isTracking.observe(this, Observer {
+            updateNotificationState(it)
+        })
+
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
@@ -91,7 +110,7 @@ class TrackingService() : BackgroundLocationService() {
 
     private fun pauseService() {
         isTracking.postValue(false)
-        isTimerEnabled =false
+        isTimerEnabled = false
     }
 
     private fun startForegroundService() {
@@ -103,26 +122,43 @@ class TrackingService() : BackgroundLocationService() {
             createNotificationChannel(notificationManager)
         }
 
-        val notificationBuild = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setAutoCancel(false)
-            .setOngoing(true)
-            .setSmallIcon(R.drawable.ic_directions_run_black_24dp)
-            .setContentTitle("Running app")
-            .setContentText("00:00:00")
-            .setContentIntent(mainActivityPendingIntent())
+        startForeground(NOTIFICATION_ID, baseNotificationBuilder.build())
 
-        startForeground(NOTIFICATION_ID, notificationBuild.build())
-
+        timeRunInSec.observe(this, Observer {
+            val notification = curNotificationBuilder
+                .setContentText(TrackingUtil.formattedStopWatch(it * 1000L))
+            notificationManager.notify(NOTIFICATION_ID, notification.build())
+        })
     }
 
-    private fun mainActivityPendingIntent() = PendingIntent.getActivity(
-        this,
-        0,
-        Intent(this, MainActivity::class.java).also {
-            it.action = ACTION_SHOW_TRACKING_FRAGMENT
-        },
-        FLAG_UPDATE_CURRENT
-    )
+    private fun updateNotificationState(isTracking: Boolean) {
+        val notificationActionText = if (isTracking) "Pause" else "Resume"
+        val pendingIntent = if (isTracking) {
+            val pauseIntent = Intent(this, TrackingService::class.java).apply {
+                action = ACTION_PAUSE_SERVICE
+            }
+            PendingIntent.getService(this, 1, pauseIntent, FLAG_UPDATE_CURRENT)
+        } else {
+            val resumeIntent = Intent(this, TrackingService::class.java).apply {
+                action = ACTION_START_OR_RESUME_SERVICE
+            }
+            PendingIntent.getService(this, 2, resumeIntent, FLAG_UPDATE_CURRENT)
+        }
+
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // swap out the action when we click on it
+        curNotificationBuilder.javaClass.getDeclaredField("mActions").apply {
+            isAccessible = true
+            set(curNotificationBuilder, ArrayList<NotificationCompat.Action>())
+        }
+        curNotificationBuilder = baseNotificationBuilder
+            .addAction(R.drawable.ic_pause_black_24dp, notificationActionText, pendingIntent)
+
+        notificationManager.notify(NOTIFICATION_ID, curNotificationBuilder.build())
+
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(notificationManager: NotificationManager) {

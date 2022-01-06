@@ -15,13 +15,17 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.maps.model.LatLng
+import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
+import javax.inject.Inject
 
 typealias Polyline = MutableList<LatLng>
 typealias Polylines = MutableList<Polyline>
 
+@AndroidEntryPoint
 open class BackgroundLocationService : LifecycleService() {
 
+    @Inject
     lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
     companion object {
@@ -34,7 +38,6 @@ open class BackgroundLocationService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         postInitValues()
-        fusedLocationProviderClient = FusedLocationProviderClient(this)
         isTracking.observe(this, Observer {
             updateLocationTracking(it)
         })
