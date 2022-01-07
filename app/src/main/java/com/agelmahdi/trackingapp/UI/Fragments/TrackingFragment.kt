@@ -2,19 +2,20 @@ package com.agelmahdi.trackingapp.UI.Fragments
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
-import com.agelmahdi.trackingapp.Others.Constants
+import androidx.navigation.fragment.findNavController
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_PAUSE_SERVICE
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_START_OR_RESUME_SERVICE
+import com.agelmahdi.trackingapp.Others.Constants.ACTION_STOP_SERVICE
 import com.agelmahdi.trackingapp.Others.Constants.CAMERA_ZOOM
 import com.agelmahdi.trackingapp.Others.Constants.POLYLINE_COLOR
 import com.agelmahdi.trackingapp.Others.Constants.POLYLINE_WITH
 import com.agelmahdi.trackingapp.Others.TrackingUtil
+import com.agelmahdi.trackingapp.Others.Utils
+import com.agelmahdi.trackingapp.R
 import com.agelmahdi.trackingapp.Sevices.BackgroundLocationService
 import com.agelmahdi.trackingapp.Sevices.Polyline
 import com.agelmahdi.trackingapp.Sevices.TrackingService
@@ -43,14 +44,19 @@ class TrackingFragment : Fragment() {
 
     private var currentTimeInMillis = 0L
 
+    private var menu: Menu? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentTrackingBinding.inflate(inflater, container, false)
-        val view = binding.root
 
+        setHasOptionsMenu(true)
+
+        _binding = FragmentTrackingBinding.inflate(inflater, container, false)
+
+        val view = binding.root
         binding.mapView.onCreate(savedInstanceState)
 
         binding.mapView.getMapAsync {
@@ -61,6 +67,7 @@ class TrackingFragment : Fragment() {
         binding.btnToggleRun.setOnClickListener {
             toggleRun()
         }
+
         subscribeToObservers()
         return view
     }
@@ -68,6 +75,7 @@ class TrackingFragment : Fragment() {
     private fun toggleRun() {
 
         if (isTracking) {
+            menu?.getItem(0)?.isVisible = true
             sendCommandToService(ACTION_PAUSE_SERVICE)
         } else {
             sendCommandToService(ACTION_START_OR_RESUME_SERVICE)
@@ -88,9 +96,15 @@ class TrackingFragment : Fragment() {
 
         BackgroundLocationService.timeRunInMillis.observe(viewLifecycleOwner, Observer {
             currentTimeInMillis = it
-            val formatTime = TrackingUtil.formattedStopWatch(currentTimeInMillis,true)
+            val formatTime = TrackingUtil.formattedStopWatch(currentTimeInMillis, true)
             binding.tvTimer.text = formatTime
         })
+
+    }
+
+    private fun cancelRun() {
+        sendCommandToService(ACTION_STOP_SERVICE)
+        findNavController().navigate(R.id.action_trackingFragment_to_runFragment)
 
     }
 
@@ -102,7 +116,7 @@ class TrackingFragment : Fragment() {
         } else {
             binding.btnToggleRun.text = "Stop"
             binding.btnFinishRun.visibility = View.GONE
-
+            menu?.getItem(0)?.isVisible = true
         }
     }
 
@@ -149,6 +163,41 @@ class TrackingFragment : Fragment() {
         }
     }
 
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.toolbar_tracking_menu, menu)
+        this.menu = menu
+        super.onCreateOptionsMenu(menu, inflater)
+
+    }
+
+    // to change the visibility of menu item
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        super.onPrepareOptionsMenu(menu)
+        if (currentTimeInMillis > 0L){
+            this.menu?.getItem(0)?.isVisible = true
+        }
+
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.icCancelTracking -> {
+                val dialog = Utils.showCancelDialog(
+                    requireContext(),
+                    "Would you like to cancel?",
+                    "Are you sure to cancel the current run and delete all its data?"
+                )
+                    .setPositiveButton("Yes") { _, _ ->
+                        cancelRun()
+                    }
+                    .create()
+
+                dialog.show()
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     override fun onResume() {
         super.onResume()
         binding.mapView.onResume()
@@ -184,5 +233,6 @@ class TrackingFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+
 
 }

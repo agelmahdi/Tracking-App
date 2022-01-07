@@ -37,6 +37,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupNavHostFragment() {
+
+        setSupportActionBar(binding.toolbar)
+
         navHostFragment =
             supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment
 

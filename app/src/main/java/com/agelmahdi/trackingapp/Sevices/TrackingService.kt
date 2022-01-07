@@ -34,7 +34,8 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class TrackingService() : BackgroundLocationService() {
 
-    var isServiceStarted = true
+    var isServiceNewStart = true
+    var isServiceStopped = false
 
     private var isTimerEnabled = false
 
@@ -64,9 +65,9 @@ class TrackingService() : BackgroundLocationService() {
         intent?.let {
             when (it.action) {
                 ACTION_START_OR_RESUME_SERVICE -> {
-                    if (isServiceStarted) {
+                    if (isServiceNewStart) {
                         startForegroundService()
-                        isServiceStarted = !isServiceStarted
+                        isServiceNewStart = !isServiceNewStart
                     } else {
                         Timber.d("Resuming service....")
                         startTimer()
@@ -76,6 +77,7 @@ class TrackingService() : BackgroundLocationService() {
                     pauseService()
                 }
                 ACTION_STOP_SERVICE -> {
+                    stopService()
                     Timber.d(ACTION_START_OR_RESUME_SERVICE)
                 }
             }
@@ -108,6 +110,21 @@ class TrackingService() : BackgroundLocationService() {
 
     }
 
+    private fun stopService() {
+        isServiceStopped = true
+        isServiceNewStart = true
+        pauseService()
+        postInitValues()
+        stopService(Intent(this,BackgroundLocationService::class.java))
+        stopForeground(true)
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE)
+                as NotificationManager
+        notificationManager.cancel(NOTIFICATION_ID);
+
+        stopSelf()
+
+    }
+
     private fun pauseService() {
         isTracking.postValue(false)
         isTimerEnabled = false
@@ -124,11 +141,15 @@ class TrackingService() : BackgroundLocationService() {
 
         startForeground(NOTIFICATION_ID, baseNotificationBuilder.build())
 
-        timeRunInSec.observe(this, Observer {
-            val notification = curNotificationBuilder
-                .setContentText(TrackingUtil.formattedStopWatch(it * 1000L))
-            notificationManager.notify(NOTIFICATION_ID, notification.build())
-        })
+        if (!isServiceStopped){
+            timeRunInSec.observe(this, Observer {
+                val notification = curNotificationBuilder
+                    .setContentText(TrackingUtil.formattedStopWatch(it * 1000L))
+                notificationManager.notify(NOTIFICATION_ID, notification.build())
+            })
+        }
+
+
     }
 
     private fun updateNotificationState(isTracking: Boolean) {
@@ -149,15 +170,17 @@ class TrackingService() : BackgroundLocationService() {
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // swap out the action when we click on it
+
         curNotificationBuilder.javaClass.getDeclaredField("mActions").apply {
             isAccessible = true
             set(curNotificationBuilder, ArrayList<NotificationCompat.Action>())
         }
-        curNotificationBuilder = baseNotificationBuilder
-            .addAction(R.drawable.ic_pause_black_24dp, notificationActionText, pendingIntent)
 
-        notificationManager.notify(NOTIFICATION_ID, curNotificationBuilder.build())
-
+        if (!isServiceStopped) {
+            curNotificationBuilder = baseNotificationBuilder
+                .addAction(R.drawable.ic_pause_black_24dp, notificationActionText, pendingIntent)
+            notificationManager.notify(NOTIFICATION_ID, curNotificationBuilder.build())
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)

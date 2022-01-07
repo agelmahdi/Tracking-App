@@ -43,7 +43,7 @@ open class BackgroundLocationService : LifecycleService() {
         })
 
     }
-    private fun postInitValues() {
+    fun postInitValues() {
         isTracking.postValue(false)
         pathPoints.postValue(mutableListOf())
         timeRunInMillis.postValue(0L)
