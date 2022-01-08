@@ -1,9 +1,11 @@
 package com.agelmahdi.trackingapp.DI
 
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat.getSystemService
 import com.agelmahdi.trackingapp.Others.Constants
 import com.agelmahdi.trackingapp.Others.Constants.NOTIFICATION_CHANNEL_ID
 import com.agelmahdi.trackingapp.R
@@ -51,4 +53,12 @@ object ServiceModule {
         .setContentTitle("Running app")
         .setContentText("00:00:00")
         .setContentIntent(pendingIntent)
+
+    @Provides
+    @ServiceScoped
+    fun provideNotificationManager(
+        @ApplicationContext context: Context
+    ) = context.getSystemService(Context.NOTIFICATION_SERVICE)
+            as NotificationManager
+
 }

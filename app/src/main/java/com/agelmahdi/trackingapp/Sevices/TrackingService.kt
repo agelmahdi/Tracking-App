@@ -48,6 +48,9 @@ class TrackingService() : BackgroundLocationService() {
     @Inject
     lateinit var baseNotificationBuilder: NotificationCompat.Builder
 
+    @Inject
+    lateinit var notificationManager:  NotificationManager
+
     lateinit var curNotificationBuilder: NotificationCompat.Builder
 
     override fun onCreate() {
@@ -78,7 +81,6 @@ class TrackingService() : BackgroundLocationService() {
                 }
                 ACTION_STOP_SERVICE -> {
                     stopService()
-                    Timber.d(ACTION_START_OR_RESUME_SERVICE)
                 }
             }
         }
@@ -115,14 +117,13 @@ class TrackingService() : BackgroundLocationService() {
         isServiceNewStart = true
         pauseService()
         postInitValues()
-        stopService(Intent(this,BackgroundLocationService::class.java))
         stopForeground(true)
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE)
-                as NotificationManager
-        notificationManager.cancel(NOTIFICATION_ID);
-
         stopSelf()
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationManager.deleteNotificationChannel(NOTIFICATION_CHANNEL_ID)
+        }
+        notificationManager.cancel(NOTIFICATION_ID)
     }
 
     private fun pauseService() {
@@ -132,14 +133,12 @@ class TrackingService() : BackgroundLocationService() {
 
     private fun startForegroundService() {
         startTimer()
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE)
-                as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel(notificationManager)
         }
 
-        startForeground(NOTIFICATION_ID, baseNotificationBuilder.build())
+        startForeground(NOTIFICATION_ID, curNotificationBuilder.build())
 
         if (!isServiceStopped){
             timeRunInSec.observe(this, Observer {
@@ -165,9 +164,6 @@ class TrackingService() : BackgroundLocationService() {
             }
             PendingIntent.getService(this, 2, resumeIntent, FLAG_UPDATE_CURRENT)
         }
-
-        val notificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // swap out the action when we click on it
 
