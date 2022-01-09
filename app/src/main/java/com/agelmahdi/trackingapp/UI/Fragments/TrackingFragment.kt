@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
+import com.agelmahdi.trackingapp.DB.Run
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_PAUSE_SERVICE
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_START_OR_RESUME_SERVICE
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_STOP_SERVICE
@@ -23,8 +24,12 @@ import com.agelmahdi.trackingapp.UI.MainViewModel
 import com.agelmahdi.trackingapp.databinding.FragmentTrackingBinding
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.*
+import kotlin.math.round
 
 @AndroidEntryPoint
 class TrackingFragment : Fragment() {
@@ -45,6 +50,8 @@ class TrackingFragment : Fragment() {
     private var currentTimeInMillis = 0L
 
     private var menu: Menu? = null
+
+    private val weight = 85f
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -68,6 +75,10 @@ class TrackingFragment : Fragment() {
             toggleRun()
         }
 
+        binding.btnFinishRun.setOnClickListener {
+            zoomTheWholeTrack()
+            endRunAndSaveToDb()
+        }
         subscribeToObservers()
         return view
     }
@@ -156,6 +167,61 @@ class TrackingFragment : Fragment() {
         }
     }
 
+    private fun endRunAndSaveToDb() {
+
+        map?.snapshot {
+            var distanceInMeters = 0
+
+            for (polyline in pathPoint) {
+                distanceInMeters += TrackingUtil.calcPolylineLength(polyline).toInt()
+            }
+
+            val avgSpeedKMH =
+                round((distanceInMeters / 1000f) / (currentTimeInMillis / 1000f / 60 / 60) * 10) / 10f
+
+            val timestamp = Calendar.getInstance().timeInMillis
+
+            val caloriesBurned = ((distanceInMeters / 1000f) * weight).toInt()
+
+            val run = Run(
+                it,
+                timestamp,
+                avgSpeedKMH,
+                distanceInMeters,
+                currentTimeInMillis,
+                caloriesBurned
+            )
+
+            viewModel.insertRun(run)
+
+            Snackbar.make(
+                requireActivity().findViewById(R.id.rootView),
+                "Run saved successfully",
+                Snackbar.LENGTH_LONG
+            ).show()
+
+            cancelRun()
+        }
+    }
+
+    private fun zoomTheWholeTrack() {
+        val bounds = LatLngBounds.builder()
+        for (polyline in pathPoint) {
+            for (pos in polyline) {
+                bounds.include(pos)
+            }
+        }
+
+        map?.moveCamera(
+            CameraUpdateFactory.newLatLngBounds(
+                bounds.build(),
+                binding.mapView.width,
+                binding.mapView.height,
+                (binding.mapView.height * 0.05f).toInt()
+            )
+        )
+    }
+
     private fun sendCommandToService(action: String) {
         Intent(requireContext(), TrackingService::class.java).also {
             it.action = action
@@ -173,7 +239,7 @@ class TrackingFragment : Fragment() {
     // to change the visibility of menu item
     override fun onPrepareOptionsMenu(menu: Menu) {
         super.onPrepareOptionsMenu(menu)
-        if (currentTimeInMillis > 0L){
+        if (currentTimeInMillis > 0L) {
             this.menu?.getItem(0)?.isVisible = true
         }
 
