@@ -8,7 +8,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.agelmahdi.trackingapp.Adapters.RunAdapter
 import com.agelmahdi.trackingapp.Others.Constants
 import com.agelmahdi.trackingapp.Others.TrackingUtil
 import com.agelmahdi.trackingapp.R
@@ -22,6 +25,7 @@ import pub.devrel.easypermissions.EasyPermissions
 class RunFragment : Fragment(), EasyPermissions.PermissionCallbacks {
 
     private val viewModel: MainViewModel by viewModels()
+    private lateinit var runAdapter: RunAdapter
 
     private var _binding: FragmentRunBinding? = null
 
@@ -40,9 +44,13 @@ class RunFragment : Fragment(), EasyPermissions.PermissionCallbacks {
         binding.fab.setOnClickListener {
             findNavController().navigate(R.id.action_runFragment_to_trackingFragment)
         }
-
+        setupRecyclerView()
         checkPermissions()
 
+
+        viewModel.runSortedByDate.observe(viewLifecycleOwner, Observer {
+            runAdapter.differ.submitList(it)
+        })
         return view
     }
 
@@ -75,6 +83,14 @@ class RunFragment : Fragment(), EasyPermissions.PermissionCallbacks {
 
                 )
         }
+    private fun setupRecyclerView() {
+
+        runAdapter = RunAdapter()
+        binding.rvRuns.apply {
+            adapter = runAdapter
+            layoutManager = LinearLayoutManager(activity)
+        }
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()
