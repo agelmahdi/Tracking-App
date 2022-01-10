@@ -29,6 +29,7 @@ import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.*
+import javax.inject.Inject
 import kotlin.math.round
 
 @AndroidEntryPoint
@@ -51,7 +52,8 @@ class TrackingFragment : Fragment() {
 
     private var menu: Menu? = null
 
-    private val weight = 85f
+    @set:Inject 
+    var weight = 0f
 
     override fun onCreateView(
         inflater: LayoutInflater,
