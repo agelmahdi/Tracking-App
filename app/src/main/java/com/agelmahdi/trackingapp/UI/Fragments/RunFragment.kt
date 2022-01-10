@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
@@ -13,6 +14,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.agelmahdi.trackingapp.Adapters.RunAdapter
 import com.agelmahdi.trackingapp.Others.Constants
+import com.agelmahdi.trackingapp.Others.SortType
 import com.agelmahdi.trackingapp.Others.TrackingUtil
 import com.agelmahdi.trackingapp.R
 import com.agelmahdi.trackingapp.UI.MainViewModel
@@ -44,14 +46,46 @@ class RunFragment : Fragment(), EasyPermissions.PermissionCallbacks {
         binding.fab.setOnClickListener {
             findNavController().navigate(R.id.action_runFragment_to_trackingFragment)
         }
+
         setupRecyclerView()
         checkPermissions()
+        sortedBy()
 
-
-        viewModel.runSortedByDate.observe(viewLifecycleOwner, Observer {
+        viewModel.runs.observe(viewLifecycleOwner, Observer {
             runAdapter.differ.submitList(it)
         })
+
         return view
+    }
+
+    private fun sortedBy() {
+        when (viewModel.sortType) {
+            SortType.DATE -> binding.spFilter.setSelection(0)
+            SortType.RUNNING_TIME -> binding.spFilter.setSelection(1)
+            SortType.DISTANCE -> binding.spFilter.setSelection(2)
+            SortType.AVG_SPEED -> binding.spFilter.setSelection(3)
+            SortType.CALORIES -> binding.spFilter.setSelection(4)
+        }
+
+        binding.spFilter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                adapterView: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                when (position) {
+                    0 -> viewModel.sortRun(SortType.DATE)
+                    1 -> viewModel.sortRun(SortType.RUNNING_TIME)
+                    2 -> viewModel.sortRun(SortType.DISTANCE)
+                    3 -> viewModel.sortRun(SortType.AVG_SPEED)
+                    4 -> viewModel.sortRun(SortType.CALORIES)
+                }
+            }
+
+            override fun onNothingSelected(p0: AdapterView<*>?) {}
+
+        }
     }
 
     private fun checkPermissions() {
@@ -83,6 +117,7 @@ class RunFragment : Fragment(), EasyPermissions.PermissionCallbacks {
 
                 )
         }
+
     private fun setupRecyclerView() {
 
         runAdapter = RunAdapter()
@@ -94,7 +129,7 @@ class RunFragment : Fragment(), EasyPermissions.PermissionCallbacks {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null
+        // _binding = null
     }
 
     override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
