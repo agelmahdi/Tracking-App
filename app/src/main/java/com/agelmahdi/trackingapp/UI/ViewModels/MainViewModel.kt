@@ -1,4 +1,4 @@
-package com.agelmahdi.trackingapp.UI
+package com.agelmahdi.trackingapp.UI.ViewModels
 
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.ViewModel

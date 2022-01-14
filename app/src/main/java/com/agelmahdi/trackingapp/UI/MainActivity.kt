@@ -47,6 +47,8 @@ class MainActivity : AppCompatActivity() {
 
         binding.bottomNavigationView.setupWithNavController(navController)
 
+        binding.bottomNavigationView.setOnItemReselectedListener {/* No thing to do*/  }
+
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
                 R.id.settingsFragment, R.id.runFragment, R.id.statisticsFragment ->

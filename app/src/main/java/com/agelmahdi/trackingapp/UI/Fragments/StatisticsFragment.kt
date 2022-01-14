@@ -12,7 +12,7 @@ import androidx.lifecycle.Observer
 import com.agelmahdi.trackingapp.Others.CustomMarkerView
 import com.agelmahdi.trackingapp.Others.TrackingUtil
 import com.agelmahdi.trackingapp.R
-import com.agelmahdi.trackingapp.UI.StatisticsViewModel
+import com.agelmahdi.trackingapp.UI.ViewModels.StatisticsViewModel
 import com.agelmahdi.trackingapp.databinding.FragmentStatisticsBinding
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.BarData

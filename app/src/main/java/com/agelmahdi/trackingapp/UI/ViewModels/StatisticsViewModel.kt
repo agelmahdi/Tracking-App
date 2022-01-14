@@ -1,4 +1,4 @@
-package com.agelmahdi.trackingapp.UI
+package com.agelmahdi.trackingapp.UI.ViewModels
 
 import androidx.lifecycle.ViewModel
 import com.agelmahdi.trackingapp.Repositories.MainRepository

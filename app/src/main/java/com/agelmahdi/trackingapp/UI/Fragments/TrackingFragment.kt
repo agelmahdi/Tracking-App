@@ -2,10 +2,12 @@ package com.agelmahdi.trackingapp.UI.Fragments
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log.d
 import android.view.*
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.agelmahdi.trackingapp.DB.Run
 import com.agelmahdi.trackingapp.Others.Constants.ACTION_PAUSE_SERVICE
@@ -15,12 +17,11 @@ import com.agelmahdi.trackingapp.Others.Constants.CAMERA_ZOOM
 import com.agelmahdi.trackingapp.Others.Constants.POLYLINE_COLOR
 import com.agelmahdi.trackingapp.Others.Constants.POLYLINE_WITH
 import com.agelmahdi.trackingapp.Others.TrackingUtil
-import com.agelmahdi.trackingapp.Others.Utils
 import com.agelmahdi.trackingapp.R
 import com.agelmahdi.trackingapp.Sevices.BackgroundLocationService
 import com.agelmahdi.trackingapp.Sevices.Polyline
 import com.agelmahdi.trackingapp.Sevices.TrackingService
-import com.agelmahdi.trackingapp.UI.MainViewModel
+import com.agelmahdi.trackingapp.UI.ViewModels.MainViewModel
 import com.agelmahdi.trackingapp.databinding.FragmentTrackingBinding
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -28,9 +29,14 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import timber.log.Timber
+import timber.log.Timber.d
 import java.util.*
 import javax.inject.Inject
 import kotlin.math.round
+
+const val CANCEL_TRACKING_DIALOG_TAG = "cancel_tracking_dialog"
+const val TAG = "TrackingFragment"
 
 @AndroidEntryPoint
 class TrackingFragment : Fragment() {
@@ -52,7 +58,7 @@ class TrackingFragment : Fragment() {
 
     private var menu: Menu? = null
 
-    @set:Inject 
+    @set:Inject
     var weight = 0f
 
     override fun onCreateView(
@@ -66,7 +72,18 @@ class TrackingFragment : Fragment() {
         _binding = FragmentTrackingBinding.inflate(inflater, container, false)
 
         val view = binding.root
+
         binding.mapView.onCreate(savedInstanceState)
+
+        if (savedInstanceState != null) {
+            val cancelTrackingDialog = parentFragmentManager
+                .findFragmentByTag(CANCEL_TRACKING_DIALOG_TAG)
+                    as CancelTrackingDialog?
+
+            cancelTrackingDialog?.setConfirmListener {
+                cancelRun()
+            }
+        }
 
         binding.mapView.getMapAsync {
             map = it
@@ -81,7 +98,9 @@ class TrackingFragment : Fragment() {
             zoomTheWholeTrack()
             endRunAndSaveToDb()
         }
+
         subscribeToObservers()
+
         return view
     }
 
@@ -102,31 +121,44 @@ class TrackingFragment : Fragment() {
         })
 
         BackgroundLocationService.pathPoints.observe(viewLifecycleOwner, Observer {
-            pathPoint = it
-            addLatestPolyline()
-            moveCameraToUser()
+            if (isTracking) {
+                pathPoint = it
+                addLatestPolyline()
+                moveCameraToUser()
+            }
         })
 
         BackgroundLocationService.timeRunInMillis.observe(viewLifecycleOwner, Observer {
-            currentTimeInMillis = it
-            val formatTime = TrackingUtil.formattedStopWatch(currentTimeInMillis, true)
-            binding.tvTimer.text = formatTime
+            if (isTracking) {
+                currentTimeInMillis = it
+                val formatTime = TrackingUtil.formattedStopWatch(currentTimeInMillis, true)
+                binding.tvTimer.text = formatTime
+            }
         })
 
     }
 
     private fun cancelRun() {
+
         sendCommandToService(ACTION_STOP_SERVICE)
-        findNavController().navigate(R.id.action_trackingFragment_to_runFragment)
+
+        val navOptions = NavOptions.Builder()
+            .setPopUpTo(R.id.trackingFragment, true)
+            .build()
+        findNavController().navigate(
+            R.id.action_trackingFragment_to_runFragment,
+            null,
+            navOptions
+        )
 
     }
 
     private fun updateTracking(isTracking: Boolean) {
         this.isTracking = isTracking
-        if (!isTracking) {
+        if (!isTracking && currentTimeInMillis > 0L) {
             binding.btnToggleRun.text = "Start"
             binding.btnFinishRun.visibility = View.VISIBLE
-        } else {
+        } else if (isTracking) {
             binding.btnToggleRun.text = "Stop"
             binding.btnFinishRun.visibility = View.GONE
             menu?.getItem(0)?.isVisible = true
@@ -250,17 +282,11 @@ class TrackingFragment : Fragment() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.icCancelTracking -> {
-                val dialog = Utils.showCancelDialog(
-                    requireContext(),
-                    "Would you like to cancel?",
-                    "Are you sure to cancel the current run and delete all its data?"
-                )
-                    .setPositiveButton("Yes") { _, _ ->
+                CancelTrackingDialog().apply {
+                    setConfirmListener {
                         cancelRun()
                     }
-                    .create()
-
-                dialog.show()
+                }.show(parentFragmentManager, CANCEL_TRACKING_DIALOG_TAG)
             }
         }
         return super.onOptionsItemSelected(item)

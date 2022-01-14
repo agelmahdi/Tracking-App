@@ -17,7 +17,7 @@ import com.agelmahdi.trackingapp.Others.Constants
 import com.agelmahdi.trackingapp.Others.SortType
 import com.agelmahdi.trackingapp.Others.TrackingUtil
 import com.agelmahdi.trackingapp.R
-import com.agelmahdi.trackingapp.UI.MainViewModel
+import com.agelmahdi.trackingapp.UI.ViewModels.MainViewModel
 import com.agelmahdi.trackingapp.databinding.FragmentRunBinding
 import dagger.hilt.android.AndroidEntryPoint
 import pub.devrel.easypermissions.AppSettingsDialog

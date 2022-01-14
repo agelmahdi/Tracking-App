@@ -72,7 +72,6 @@ class TrackingService() : BackgroundLocationService() {
                         startForegroundService()
                         isServiceNewStart = !isServiceNewStart
                     } else {
-                        Timber.d("Resuming service....")
                         startTimer()
                     }
                 }
@@ -117,6 +116,7 @@ class TrackingService() : BackgroundLocationService() {
         isServiceNewStart = true
         pauseService()
         postInitValues()
+        stopService(Intent(this,BackgroundLocationService::class.java))
         stopForeground(true)
         stopSelf()
 
